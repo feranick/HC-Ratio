@@ -2,7 +2,7 @@
 //
 //		hcratio
 //
-//		v. 1.0 - 20140814
+//		v. 2.0 - 20140814
 //
 //		Copyright (C) 2014 - Nicola Ferralis - ferralis@mit.edu
 //
@@ -40,13 +40,14 @@ using namespace std;
 
 #define OPENMP
 
-int operate(double L);
+int operate(bool type,double L1, double L2, double L3);
 void createNew();
 
 
-char version[]="1.0 - 20140814";
+char version[]="2.0 - 20140814";
 
 char coord[] = "graphene-coord.txt";
+char outname[] = "hcratio-out.txt";
 
 
 bool inSphere(double x, double y, double l);
@@ -55,33 +56,56 @@ void createNew(char * coord);
 
 int main(int argc, char *argv[])
 {
-    if(argc>1)
+    
+    if(argc<2 || argc ==3)
+    {   cout<< "\n hcratio v. "<<version<< "\n";
+        cout<< " Copyright 2014: Nicola Ferralis <ferralis@mit.edu>\n\n";
+        cout<< " H:C ratio calculator for graphene patches\n\n";
+        cout<< " Usage: \n";
+        cout << " 1. Calculate H:C for a single length L:\n";
+        cout << "    hcratio < L in nm> \n";
+        cout << " 2. Calculate and save H:C for range of lengths L:\n";
+        cout << "    hcratio <L initial> <L final> <L step>\n\n";
+        
+    }
+    else {
+        
+        ifstream infile;
+        infile.open(coord);
+        
+        if(!infile)
+            {createNew(coord);}
+        infile.close();
+        
+        
+        if(argc==2)
+            {operate(true, atof(argv[1]),0,0);}
+        else
         {
-            createNew(coord);
-            operate(atof(argv[1]));
+            if(argc>3)
+                {operate(false,atof(argv[1]), atof(argv[2]), atof(argv[3]));}
         }
     
-    else
-    {   cout<< "\n hcratio v. "<<version<< "\n\n";
-        cout<< " H:C ratio calculator for graphene patches\n\n";
-        cout<< " Usage:  hcratio <lambda in nm> \n\n";
-        cout<< " Copyright 2014: Nicola Ferralis <ferralis@mit.edu>\n\n";}
+    }
     
     return 0;
 }
 
 
 //OPERATE 
-int operate(double L)
+int operate(bool type,double L1, double L2, double L3)
 
-{   double lAng = L*10;
+{
     
+    ////////////////////////////////
+    // Create and read coordinates.
+    ////////////////////////////////
     ifstream infile;
     infile.open(coord);
-	
+    
     if(!infile)
-    {cout<<"\n file '"<< coord<<"' not found\n\n";
-		return 0;}
+        {cout<<"\n file '"<< coord<<"' not found\n\n";
+        return 0;}
     //cout<<"\n Using coordinate file: "<<coord<<"\n\n";
     
     string tmp;
@@ -115,46 +139,79 @@ int operate(double L)
     
     infile.close();
     
+    ////////////////////////////////
     
-    //Calculate number of C atoms
-    int numC = 0;
-    int numH = 0;
-    int tn1, tn2, tn3 = 0;
-    bool flag = false;
+    int lStep = 0;
     
-    for (int j=0; j<nAtoms; j++) {
+    ofstream outfile;
+    
+    if(type==true)
+        {lStep = 0;}
+    else
+        {lStep =(int) ((L2-L1)/L3);
+            outfile.open(outname);
+            outfile<<"size (nm) \tH:C ratio\n";}
+    
+    double * HCratio = new double(lStep);
+    double *lAng = new double(lStep);
+    
+    
+    
+    for (int g=0; g<=lStep; g++){
+
+        double numC = 0;
+        double numH = 0;
+        int tn1, tn2, tn3 = 0;
+        bool flag = false;
+    
+        for (int j=0; j<nAtoms; j++) {
+            
+            lAng[g] = (L1 + g*L3)*10;
         
-        if(inSphere(X[j],Y[j],lAng) == true) {
-            numC++;
-            tn1 = n1[j];
-            tn2 = n2[j];
-            tn3 = n3[j];
+            if(inSphere(X[j],Y[j],lAng[g]) == true) {
+                numC++;
+                tn1 = n1[j];
+                tn2 = n2[j];
+                tn3 = n3[j];
             
-            if((tn1==-1 || tn2==-1 || tn3==-1) && flag==false) {
-                cout<<" Warning: including edge of coordinate file \n\n";
-                flag=true;
-            }
-            
-            if(tn1!=-1 && tn2!=-1 && tn3!=-1) {
-                if(inSphere(X[tn1],Y[tn1],lAng) == false || inSphere(X[tn2],Y[tn2],lAng) == false || inSphere(X[tn3],Y[tn3],lAng) == false) {
-                    numH++;
+                if((tn1==-1 || tn2==-1 || tn3==-1) && flag==false) {
+                    cout<<" Warning: including edge of coordinate file \n\n";
+                    flag=true;
                 }
-            }
             
+                if(tn1!=-1 && tn2!=-1 && tn3!=-1) {
+                    if(inSphere(X[tn1],Y[tn1],lAng[g]) == false || inSphere(X[tn2],Y[tn2],lAng[g]) == false || inSphere(X[tn3],Y[tn3],lAng[g]) == false) {
+                        numH++;
+                    }
+                }
+            
+            }
         }
+    
+        HCratio[g]=(numH/numC);
+        
+        if(type==true) {
+            cout<<"\n num C atoms within "<<L1<< " nm circle: "<<numC<<"\n";
+            cout<<" num H atoms decorating the edges of "<<L1<< " nm circle: "<<numH<<"\n";
+            cout<<" Estimated H:C ratio: "<< HCratio[g] <<"\n\n";}
+        
+        else
+            {outfile<<lAng[g]/10<<"\t"<<HCratio[g]<<"\n";}
     }
     
-    cout<<" num C atoms within "<<L<< " nm circle: "<<numC<<"\n";
-    cout<<" num H atoms decorating the edges of "<<L<< " nm circle: "<<numH<<"\n";
-    cout<<" Estimated H:C ratio: "<< ((double)numH/(double)numC) <<"\n\n";
-
     delete[] Atom;
     delete[] Y;
     delete[] X;
     delete[] n1;
     delete[] n2;
     delete[] n3;
-     
+    delete[] HCratio;
+    
+    if(type==false)
+        {   cout<<"\n H:C ratios saved in: "<<outname<<"\n\n";
+            outfile.close();}
+
+
 return 0;}
 
 
@@ -5328,6 +5385,6 @@ void createNew(char * coord){
 5149	47.955	58.98499	5148	5098	-1	\n\
 5150	50.735	58.98499	-1	-1	5099";
     outfile.close();
-    cout<<"\n Coordinate file saved in: "<<coord<<"\n\n";
+    cout<<"\n Coordinate file saved in: "<<coord<<"\n";
     
 }
