@@ -2,7 +2,7 @@
 //
 //		hcratio
 //
-//		v. 2.0 - 20140814
+//		v. 2.0.1 - 20140815
 //
 //		Copyright (C) 2014 - Nicola Ferralis - ferralis@mit.edu
 //
@@ -44,7 +44,7 @@ int operate(bool type,double L1, double L2, double L3);
 void createNew();
 
 
-char version[]="2.0 - 20140814";
+char version[]="2.0.1 - 20140815";
 
 char coord[] = "graphene-coord.txt";
 char outname[] = "hcratio-out.txt";
@@ -152,8 +152,8 @@ int operate(bool type,double L1, double L2, double L3)
             outfile.open(outname);
             outfile<<"size (nm) \tH:C ratio\n";}
     
-    double * HCratio = new double(lStep);
-    double *lAng = new double(lStep);
+    double *HCratio = new double[lStep+1];
+    double *lAng = new double[lStep+1];
     
     
     
@@ -206,6 +206,7 @@ int operate(bool type,double L1, double L2, double L3)
     delete[] n2;
     delete[] n3;
     delete[] HCratio;
+    delete[] lAng;
     
     if(type==false)
         {   cout<<"\n H:C ratios saved in: "<<outname<<"\n\n";
