@@ -2,7 +2,7 @@
 //
 //		hcratio
 //
-//		v. 2.0.1 - 20140815
+//		v. 3.0 - 20140816
 //
 //		Copyright (C) 2014 - Nicola Ferralis - ferralis@mit.edu
 //
@@ -38,34 +38,32 @@
 #include <stdio.h>
 using namespace std;
 
-#define OPENMP
-
-int operate(bool type,double L1, double L2, double L3);
-void createNew();
-
-
-char version[]="2.0.1 - 20140815";
+char version[]="3.0 - 20140816";
 
 char coord[] = "graphene-coord.txt";
 char outname[] = "hcratio-out.txt";
 
-
-bool inSphere(double x, double y, double l);
+int operate(bool type,double L1, double L2, double L3, double slack);
+bool inSphere(double x, double y, double l, double s);
 void createNew(char * coord);
+
 
 
 int main(int argc, char *argv[])
 {
-    
-    if(argc<2 || argc ==3)
+    if(argc<2 || argc ==4)
     {   cout<< "\n hcratio v. "<<version<< "\n";
         cout<< " Copyright 2014: Nicola Ferralis <ferralis@mit.edu>\n\n";
         cout<< " H:C ratio calculator for graphene patches\n\n";
         cout<< " Usage: \n";
-        cout << " 1. Calculate H:C for a single length L:\n";
-        cout << "    hcratio < L in nm> \n";
-        cout << " 2. Calculate and save H:C for range of lengths L:\n";
-        cout << "    hcratio <L initial> <L final> <L step>\n\n";
+        cout << " 1. Calculate H:C for a single length L:\n\n";
+        cout << "      hcratio < L in nm> \n\n";
+        cout << " 2. Calculate H:C for a single length L,\n";
+        cout << "    moving the center by <shift in nm>: \n\n";
+        cout << "      hcratio < L in nm> <shift in nm> \n\n";
+        cout << " 3. Calculate and save H:C for range of lengths L:\n";
+        cout << "    moving the center by <shift in nm>:\n\n";
+        cout << "      hcratio <L initial> <L final> <L step> <shift in nm>\n\n";
         
     }
     else {
@@ -77,14 +75,14 @@ int main(int argc, char *argv[])
             {createNew(coord);}
         infile.close();
         
-        
         if(argc==2)
-            {operate(true, atof(argv[1]),0,0);}
-        else
-        {
-            if(argc>3)
-                {operate(false,atof(argv[1]), atof(argv[2]), atof(argv[3]));}
-        }
+            {operate(true, atof(argv[1]),0,0,0);}
+        
+        if(argc==3)
+            {operate(true, atof(argv[1]),0,0,atof(argv[2]));}
+        
+        if(argc>4)
+                {operate(false,atof(argv[1]), atof(argv[2]), atof(argv[3]),atof(argv[4]));}
     
     }
     
@@ -93,7 +91,7 @@ int main(int argc, char *argv[])
 
 
 //OPERATE 
-int operate(bool type,double L1, double L2, double L3)
+int operate(bool type,double L1, double L2, double L3, double shift)
 
 {
     
@@ -120,12 +118,12 @@ int operate(bool type,double L1, double L2, double L3)
     
     //cout<<" Ind: "<<ind<<"\n";
     
-    int *Atom = new int[ind];
-    double *X = new double[ind];
-    double *Y = new double[ind];
-    int *n1 = new int[ind];
-    int *n2 = new int[ind];
-    int *n3 = new int[ind];
+    int *Atom = new int[ind] ();
+    double *X = new double[ind] ();
+    double *Y = new double[ind] ();
+    int *n1 = new int[ind] ();
+    int *n2 = new int[ind] ();
+    int *n3 = new int[ind] ();
     int nAtoms = 0;
     
     
@@ -152,51 +150,74 @@ int operate(bool type,double L1, double L2, double L3)
             outfile.open(outname);
             outfile<<"size (nm) \tH:C ratio\n";}
     
-    double *HCratio = new double[lStep+1];
-    double *lAng = new double[lStep+1];
-    
-    
+    //double *HCratio = new double[lStep+1];
+    double slack = 0;
+    double lAng = 0.0;
     
     for (int g=0; g<=lStep; g++){
 
-        double numC = 0;
-        double numH = 0;
+        double HCratio = 0.0;
+        double HCratioMean = 0.0;
+        double HCratioStDevT = 0.0;
+        double HCratioStDev = 0.0;
+        
         int tn1, tn2, tn3 = 0;
         bool flag = false;
-    
-        for (int j=0; j<nAtoms; j++) {
-            
-            lAng[g] = (L1 + g*L3)*10;
         
-            if(inSphere(X[j],Y[j],lAng[g]) == true) {
-                numC++;
-                tn1 = n1[j];
-                tn2 = n2[j];
-                tn3 = n3[j];
+        double *numC = new double[3] ();
+        double *numH = new double[3] ();
+        
+        for (int k=0; k<3; k++) {
             
-                if((tn1==-1 || tn2==-1 || tn3==-1) && flag==false) {
-                    cout<<" Warning: including edge of coordinate file \n\n";
-                    flag=true;
-                }
+            slack = (k-1)*shift;
+    
+            for (int j=0; j<nAtoms; j++) {
             
-                if(tn1!=-1 && tn2!=-1 && tn3!=-1) {
-                    if(inSphere(X[tn1],Y[tn1],lAng[g]) == false || inSphere(X[tn2],Y[tn2],lAng[g]) == false || inSphere(X[tn3],Y[tn3],lAng[g]) == false) {
-                        numH++;
+                lAng = (L1 + g*L3)*10;
+        
+                if(inSphere(X[j],Y[j],lAng,slack) == true) {
+                    numC[k] ++;
+                    tn1 = n1[j];
+                    tn2 = n2[j];
+                    tn3 = n3[j];
+            
+                    if((tn1==-1 || tn2==-1 || tn3==-1) && flag==false) {
+                        cout<<" Warning: including edge of coordinate file \n\n";
+                        flag=true;
                     }
-                }
             
+                    if(tn1!=-1 && tn2!=-1 && tn3!=-1) {
+                        if(inSphere(X[tn1],Y[tn1],lAng,slack) == false || inSphere(X[tn2],Y[tn2],lAng,slack) == false || inSphere(X[tn3],Y[tn3],lAng,slack) == false) {
+                            numH[k]++;
+                        }
+                    }
+            
+                }
             }
+    
+            
         }
     
-        HCratio[g]=(numH/numC);
+        for (int k=0; k<3; k++) {
+            HCratio = HCratio + (numH[k]/numC[k]);
+            HCratioMean = HCratio/(k+1);
+        }
+        for (int k=0; k<3; k++) {
+            HCratioStDevT = HCratioStDevT + pow((numH[k]/numC[k]) - HCratioMean, 2);
+            HCratioStDev = sqrt(HCratioStDevT/(k));
+        }
+        
+        delete [] numH;
+        delete [] numC;
+        
+        //cout<<"k: "<<k<<"\nnumH: "<<numH<<"\nnumC: "<<numC<<"\nnumH/numC: "<<numH/numC<<"\n"<<pow((numH/numC) - HCratioMean, 2)<<"\n";
+        //cout<<"HCratio: "<<HCratioMean<<" +- "<<HCratioStDevT<<"\n\n";
         
         if(type==true) {
-            cout<<"\n num C atoms within "<<L1<< " nm circle: "<<numC<<"\n";
-            cout<<" num H atoms decorating the edges of "<<L1<< " nm circle: "<<numH<<"\n";
-            cout<<" Estimated H:C ratio: "<< HCratio[g] <<"\n\n";}
+            cout<<" Estimated H:C ratio within "<<L1<< " nm circle: "<< HCratioMean << " +- "<<HCratioStDev<<"\n\n";}
         
         else
-            {outfile<<lAng[g]/10<<"\t"<<HCratio[g]<<"\n";}
+            {outfile<<lAng/10<<"\t"<<HCratioMean<<"\t"<<HCratioStDev<<"\n";}
     }
     
     delete[] Atom;
@@ -205,20 +226,18 @@ int operate(bool type,double L1, double L2, double L3)
     delete[] n1;
     delete[] n2;
     delete[] n3;
-    delete[] HCratio;
-    delete[] lAng;
     
     if(type==false)
-        {   cout<<"\n H:C ratios saved in: "<<outname<<"\n\n";
+        {   cout<<" H:C ratios saved in: "<<outname<<"\n\n";
             outfile.close();}
 
 
 return 0;}
 
 
-bool inSphere(double x, double y, double l) {
+bool inSphere(double x, double y, double l, double s) {
     
-    double dist = sqrt(pow(x,2)+pow(y, 2));
+    double dist = sqrt(pow(x+s,2)+pow(y+s, 2));
     
     if(dist<=l/2)
         return true;
