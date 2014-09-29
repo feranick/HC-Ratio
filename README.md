@@ -15,7 +15,7 @@ hcratio L_in_nm
  2. Calculate H:C for a single length L,
 moving the center by shift_in_nm: 
 
-hcratio L_in_nm> shift_in_nm 
+hcratio L_in_nm shift_in_nm 
 
  3. Calculate and save H:C for range of lengths L, 
 moving the center by shift_in_nm:
