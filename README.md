@@ -3,8 +3,8 @@ HC-Ratio
 
 Gives an average H:C ratio from a graphene patch within a circle
 
-Current version: 3.0 - 20140816
-Copyright (C) 2014 - Nicola Ferralis - feranick@hotmail.com
+Current version: 3.1 - 20150223
+Copyright (C) 2014-2015 - Nicola Ferralis - feranick@hotmail.com
 
 
 Usage: 

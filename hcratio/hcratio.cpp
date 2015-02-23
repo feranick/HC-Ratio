@@ -2,7 +2,7 @@
 //
 //		hcratio
 //
-//		v. 3.0 - 20140816
+//		v. 3.1 - 20150223
 //
 //		Copyright (C) 2014 - Nicola Ferralis - ferralis@mit.edu
 //
@@ -38,7 +38,7 @@
 #include <stdio.h>
 using namespace std;
 
-char version[]="3.0 - 20140816";
+char version[]="3.1 - 20150223";
 
 char coord[] = "graphene-coord.txt";
 char outname[] = "hcratio-out.txt";
@@ -204,7 +204,7 @@ int operate(bool type,double L1, double L2, double L3, double shift)
         }
         for (int k=0; k<3; k++) {
             HCratioStDevT = HCratioStDevT + pow((numH[k]/numC[k]) - HCratioMean, 2);
-            HCratioStDev = sqrt(HCratioStDevT/(k));
+            HCratioStDev = sqrt(HCratioStDevT/(k+1));
         }
         
         delete [] numH;
