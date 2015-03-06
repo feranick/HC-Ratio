@@ -1,9 +1,9 @@
 # use "gcc" to compile source files.
 CC = g++
-#CC = g++-mp-4.9
+#CC = g++-mp-5
 # the linker is also "gcc". It might be something else with other compilers.
 LD = g++
-#LD = g++-mp-4.9
+#LD = g++-mp-5
 # Compiler flags go here.
 CFLAGS = -Wall -O3
 #CFLAGS = -Wall -O3 -fopenmp 
